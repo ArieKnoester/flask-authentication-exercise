@@ -1,11 +1,15 @@
+import dotenv
 from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from models.user import User, db
+from dotenv import load_dotenv
+import os
 
 
+load_dotenv(".env")
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret-key-goes-here'
+app.config['SECRET_KEY'] = os.environ["SECRET_KEY"]
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
 db.init_app(app)
 
