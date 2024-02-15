@@ -1,4 +1,3 @@
-import dotenv
 from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
@@ -26,10 +25,15 @@ def home():
 @app.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        print(request.form.get("name"))
+        user_password = request.form.get("password")
+        hashed_password = generate_password_hash(
+            password=user_password,
+            method="pbkdf2",
+            salt_length=8
+        )
         new_user = User(
             email=request.form.get("email"),
-            password=request.form.get("password"),
+            password=hashed_password,
             name=request.form.get("name")
         )
         db.session.add(new_user)
