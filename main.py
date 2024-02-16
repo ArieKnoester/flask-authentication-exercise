@@ -34,19 +34,29 @@ def home():
 @app.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        user_email = request.form.get("email")
         user_password = request.form.get("password")
+        user_name = request.form.get("name")
+
+        # Check if email already exists.
+        user_exists = db.session.query(db.exists().where(User.email == user_email)).scalar()
+        if user_exists:
+            flash("An account already exists with that email address. Log in instead.")
+            return redirect(url_for('login'))
+
         hashed_password = generate_password_hash(
             password=user_password,
             method="pbkdf2",
             salt_length=8
         )
+
         # Pycharm Community Edition apparently has a bug which may highlight
         # these arguments as 'unexpected arguments' when using flask_sqlalchemy
         # and any Mixin class.
         new_user = User(
-            email=request.form.get("email"),
+            email=user_email,
             password=hashed_password,
-            name=request.form.get("name")
+            name=user_name
         )
 
         db.session.add(new_user)
