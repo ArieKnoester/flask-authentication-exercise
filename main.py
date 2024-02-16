@@ -1,7 +1,7 @@
 # How to generate good secret keys:
 # https://flask.palletsprojects.com/en/latest/quickstart/#sessions
 from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
-from flask_login import login_user, LoginManager, login_required, current_user, logout_user
+from flask_login import login_user, LoginManager, login_required, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from models.user import User, db
 from dotenv import load_dotenv
