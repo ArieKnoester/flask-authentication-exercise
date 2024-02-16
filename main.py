@@ -23,7 +23,7 @@ with app.app_context():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one()
+    return db.session.execute(db.select(User).filter_by(id=user_id)).scalar()
 
 
 @app.route('/')
@@ -60,13 +60,25 @@ def register():
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
-        user_to_login = db.session.execute(db.select(User).filter_by(email=email)).scalar_one()
-        is_correct_password = check_password_hash(user_to_login.password, password)
-        if user_to_login and is_correct_password:
-            login_user(user_to_login)
-            return redirect(url_for('secrets'))
+        email_input = request.form.get("email")
+        password_input = request.form.get("password")
+
+        # Email has UNIQUE constraint in database table.
+        user_exists = db.session.query(db.exists().where(User.email == email_input)).scalar()
+
+        if not user_exists:
+            flash("Email not found. Please try again.")
+            return render_template("login.html")
+
+        user_to_login = db.session.execute(db.select(User).filter_by(email=email_input)).scalar()
+        is_correct_password = check_password_hash(user_to_login.password, password_input)
+
+        if not is_correct_password:
+            flash("Password incorrect. Please try again.")
+            return render_template("login.html")
+
+        login_user(user_to_login)
+        return redirect(url_for('secrets'))
 
     return render_template("login.html")
 
