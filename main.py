@@ -1,8 +1,8 @@
 # How to generate good secret keys:
 # https://flask.palletsprojects.com/en/latest/quickstart/#sessions
 from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
+from flask_login import login_user, LoginManager, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from models.user import User, db
 from dotenv import load_dotenv
 import os
@@ -13,10 +13,17 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ["SECRET_KEY"]
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db.init_app(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 
 with app.app_context():
     db.create_all()
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one()
 
 
 @app.route('/')
@@ -33,35 +40,52 @@ def register():
             method="pbkdf2",
             salt_length=8
         )
+        # Pycharm Community Edition apparently has a bug which may highlight
+        # these arguments as 'unexpected arguments' when using flask_sqlalchemy
+        # and any Mixin class.
         new_user = User(
             email=request.form.get("email"),
             password=hashed_password,
             name=request.form.get("name")
         )
+
         db.session.add(new_user)
         db.session.commit()
+        login_user(new_user)
         return redirect(url_for('secrets', name=new_user.name))
 
     return render_template("register.html")
 
 
-@app.route('/login')
+@app.route('/login', methods=["GET", "POST"])
 def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        user_to_login = db.session.execute(db.select(User).filter_by(email=email)).scalar_one()
+        is_correct_password = check_password_hash(user_to_login.password, password)
+        if user_to_login and is_correct_password:
+            login_user(user_to_login)
+            return redirect(url_for('secrets'))
+
     return render_template("login.html")
 
 
 @app.route('/secrets')
+@login_required
 def secrets():
-    user_name = request.args.get("name")
-    return render_template("secrets.html", user_name=user_name)
+    return render_template("secrets.html")
 
 
 @app.route('/logout')
+@login_required
 def logout():
-    pass
+    logout_user()
+    return redirect(url_for('home'))
 
 
 @app.route('/download')
+@login_required
 def download():
     return send_from_directory(
         directory="static",
